@@ -1,5 +1,17 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import { onMounted } from 'vue'
+
+// Detect and set dark mode
+onMounted(() => {
+  // Check for system preference
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+
+  // Apply dark mode if preferred
+  if (prefersDark) {
+    document.documentElement.classList.add('dark')
+  }
+})
 </script>
 
 <template>

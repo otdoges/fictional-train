@@ -4,19 +4,11 @@ import { db } from '@/services/db'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { useRouter } from 'vue-router'
 import { PlusCircleIcon, TrashIcon } from 'lucide-vue-next'
-import { useMotion } from '@vueuse/motion'
 
 const chats = ref([])
 const newChatName = ref('')
 const chatListRef = ref(null)
 const router = useRouter()
-
-// Animation
-const chatListMotion = useMotion(chatListRef, {
-  initial: { opacity: 0, y: 20 },
-  enter: { opacity: 1, y: 0 },
-  transition: { duration: 500 },
-})
 
 const loadChats = async () => {
   try {
