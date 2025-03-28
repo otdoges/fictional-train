@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
+import AppHeader from '@/components/AppHeader.vue'
+import { auth } from '@/services/auth'
+
+// Check if user is authenticated
+const isAuthenticated = computed(() => auth.isAuthenticated())
 
 // Detect and set dark mode
 onMounted(() => {
@@ -16,11 +21,29 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen bg-background text-foreground antialiased">
-    <RouterView />
+    <!-- Show header only when authenticated -->
+    <AppHeader v-if="isAuthenticated" />
+
+    <!-- Main content area -->
+    <main :class="{ 'pt-0': !isAuthenticated }">
+      <RouterView />
+    </main>
   </div>
 </template>
 
-<style scoped>
+<style>
+/* Remove default margins/padding */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+#app {
+  height: 100%;
+}
+
 header {
   line-height: 1.5;
   max-height: 100vh;

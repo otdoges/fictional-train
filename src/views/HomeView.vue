@@ -3,11 +3,11 @@ import ChatList from '@/components/ChatList.vue'
 </script>
 
 <template>
-  <div class="container mx-auto py-8 h-screen">
-    <div class="flex flex-col items-center mb-8">
-      <h1 class="text-3xl font-bold mb-2">AI Chat Assistant</h1>
+  <div class="container mx-auto py-6 h-[calc(100vh-60px)]">
+    <div class="flex flex-col items-center mb-6">
+      <h1 class="text-2xl font-bold mb-2">Your Conversations</h1>
       <p class="text-muted-foreground max-w-md text-center">
-        Chat with advanced AI models including Google Gemini and GPT-4.
+        Chat with advanced AI models including Google Gemini and Azure AI.
       </p>
     </div>
 

@@ -2,27 +2,47 @@
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { db } from '@/services/db'
-import { ai, type ChatMessage } from '@/services/ai'
-import ChatMessage from '@/components/ChatMessage.vue'
+import { ai, type ChatMessage as AIChatMessage } from '@/services/ai'
+import ChatMessageComponent from '@/components/ChatMessage.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
-import { SendIcon, LightningIcon } from 'lucide-vue-next'
+import { SendIcon } from 'lucide-vue-next'
+import { LockIcon, ZapIcon } from 'lucide-vue-next'
+
+// Define chat interface to match Prisma model
+interface Chat {
+  id: string
+  name: string
+  createdAt: Date
+  updatedAt: Date
+  messages: Message[]
+}
+
+interface Message {
+  id: string
+  content: string
+  role: string
+  createdAt: Date
+  chatId: string
+}
 
 const route = useRoute()
 const chatId = ref('')
-const chat = ref(null)
-const messages = ref([])
+const chat = ref<Chat | null>(null)
+const messages = ref<Message[]>([])
 const newMessage = ref('')
 const loading = ref(false)
-const messageContainerRef = ref(null)
+const messageContainerRef = ref<HTMLDivElement | null>(null)
 const streamedResponse = ref('')
+const useAzureModel = ref(false)
 
 const loadChat = async () => {
   try {
     chatId.value = route.params.id as string
-    chat.value = await db.getChat(chatId.value)
+    const chatData = await db.getChat(chatId.value)
 
-    if (chat.value) {
-      messages.value = chat.value.messages || []
+    if (chatData) {
+      chat.value = chatData as Chat
+      messages.value = chatData.messages || []
     }
   } catch (error) {
     console.error('Error loading chat:', error)
@@ -43,13 +63,17 @@ const saveMessage = async (content: string, role: 'user' | 'assistant') => {
       content,
       role,
     })
-    messages.value.push(message)
+    messages.value.push(message as Message)
     await scrollToBottom()
     return message
   } catch (error) {
     console.error('Error saving message:', error)
     throw error
   }
+}
+
+const toggleModel = () => {
+  useAzureModel.value = !useAzureModel.value
 }
 
 const sendMessage = async () => {
@@ -65,14 +89,18 @@ const sendMessage = async () => {
     await saveMessage(userMessage, 'user')
 
     // Format messages for AI
-    const aiMessages: ChatMessage[] = messages.value.map((msg) => ({
-      role: msg.role as 'user' | 'assistant' | 'system',
+    const aiMessages: AIChatMessage[] = messages.value.map((msg) => ({
+      role:
+        msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system'
+          ? (msg.role as 'user' | 'assistant' | 'system')
+          : 'user',
       content: msg.content,
     }))
 
     // Stream the AI response
     await ai.streamChat(
       aiMessages,
+      useAzureModel.value,
       undefined, // use default model
       (chunk) => {
         streamedResponse.value += chunk
@@ -111,19 +139,31 @@ onMounted(() => {
       </div>
 
       <template v-else>
-        <ChatMessage
+        <ChatMessageComponent
           v-for="message in messages"
           :key="message.id"
-          :role="message.role"
+          :role="message.role === 'user' ? 'user' : 'assistant'"
           :content="message.content"
         />
       </template>
 
       <!-- Streaming message preview -->
-      <ChatMessage v-if="streamedResponse" role="assistant" :content="streamedResponse" />
+      <ChatMessageComponent v-if="streamedResponse" role="assistant" :content="streamedResponse" />
     </div>
 
     <div class="p-4 bg-background">
+      <!-- Model toggle -->
+      <div class="flex justify-end mb-2">
+        <button
+          @click="toggleModel"
+          class="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <LockIcon v-if="useAzureModel" class="h-3 w-3 mr-1" />
+          <ZapIcon v-else class="h-3 w-3 mr-1" />
+          Using: {{ useAzureModel ? 'Azure AI' : 'OpenRouter' }}
+        </button>
+      </div>
+
       <div class="flex gap-2 items-end">
         <textarea
           v-model="newMessage"
@@ -137,10 +177,10 @@ onMounted(() => {
           @click="sendMessage"
           :disabled="loading || !newMessage.trim()"
           class="h-10 px-4"
-          :class="{ 'animate-pulse': loading }"
+          :class="loading ? 'animate-pulse' : ''"
         >
           <SendIcon v-if="!loading" class="h-4 w-4 mr-2" />
-          <LightningIcon v-else class="h-4 w-4 mr-2 animate-spin" />
+          <ZapIcon v-else class="h-4 w-4 mr-2 animate-spin" />
           {{ loading ? 'Thinking...' : 'Send' }}
         </BaseButton>
       </div>

@@ -5,9 +5,17 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import { useRouter } from 'vue-router'
 import { PlusCircleIcon, TrashIcon } from 'lucide-vue-next'
 
-const chats = ref([])
+// Define chat interface to match Prisma model
+interface Chat {
+  id: string
+  name: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+const chats = ref<Chat[]>([])
 const newChatName = ref('')
-const chatListRef = ref(null)
+const chatListRef = ref<HTMLDivElement | null>(null)
 const router = useRouter()
 
 const loadChats = async () => {

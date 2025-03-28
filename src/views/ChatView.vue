@@ -35,9 +35,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="container mx-auto py-8 h-screen">
+  <div class="container mx-auto py-6 h-[calc(100vh-60px)]">
     <div
-      class="max-w-4xl mx-auto bg-card rounded-lg shadow-md border border-border overflow-hidden h-[calc(100vh-200px)]"
+      class="max-w-4xl mx-auto bg-card rounded-lg shadow-md border border-border overflow-hidden h-[calc(100vh-160px)]"
     >
       <div class="flex items-center gap-2 p-4 border-b border-border">
         <BaseButton variant="ghost" size="icon" @click="goBack">

@@ -1,6 +1,6 @@
 {
-  "name": "vue-test",
-  "version": "0.0.0",
+  "name": "vue-ai-chat",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -24,7 +24,6 @@
     "clsx": "^2.1.1",
     "lucide-vue-next": "^0.484.0",
     "openai": "^4.90.0",
-    "openrouter-sdk": "^1.0.9",
     "pinia": "^3.0.1",
     "postcss": "^8.5.3",
     "prisma": "^6.5.0",
