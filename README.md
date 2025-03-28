@@ -1,30 +1,66 @@
-# vue-test
+# Vue AI Chat Assistant
 
-This template should help get you started developing with Vue 3 in Vite.
+A modern AI chat application built with Vue 3, Tailwind CSS, and Shadcn UI components. The app integrates with OpenRouter to provide access to powerful AI models including Google Gemini and GPT-4.
 
-## Recommended IDE Setup
+## Features
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- 🎨 Beautiful and responsive UI with Shadcn UI components
+- 🌓 Dark/light mode support
+- 🤖 Integration with multiple AI models through OpenRouter
+- 📱 Mobile-friendly design
+- ✨ Smooth animations using @vueuse/motion
+- 🗄️ Local SQLite database using Prisma
 
-## Type Support for `.vue` Imports in TS
+## Setup
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
+1. Install dependencies:
 
 ```sh
 pnpm install
 ```
 
-### Compile and Hot-Reload for Development
+2. Create a `.env` file with your OpenRouter API key:
+
+```
+DATABASE_URL="file:./dev.db"
+OPENROUTER_API_KEY="your-openrouter-api-key"
+```
+
+3. Update the `OPENROUTER_API_KEY` in `src/services/ai.ts` with your API key.
+
+4. Set up the database:
+
+```sh
+pnpm prisma migrate dev
+```
+
+5. Run the development server:
 
 ```sh
 pnpm dev
 ```
+
+## Technologies Used
+
+- Vue 3 with Composition API
+- Vue Router for routing
+- Pinia for state management
+- Tailwind CSS for styling
+- Shadcn Vue for UI components
+- Prisma for database management
+- OpenRouter SDK for AI model access
+- Lucide icons for beautiful iconography
+
+## Project Structure
+
+- `src/components` - UI components
+- `src/views` - Page components
+- `src/services` - Database and AI service layer
+- `src/stores` - Pinia stores
+- `src/lib` - Utility functions
+- `prisma` - Database schema and migrations
+
+## Development Commands
 
 ### Type-Check, Compile and Minify for Production
 
@@ -36,25 +72,6 @@ pnpm build
 
 ```sh
 pnpm test:unit
-```
-
-### Run End-to-End Tests with [Playwright](https://playwright.dev)
-
-```sh
-# Install browsers for the first run
-npx playwright install
-
-# When testing on CI, must build the project first
-pnpm build
-
-# Runs the end-to-end tests
-pnpm test:e2e
-# Runs the tests only on Chromium
-pnpm test:e2e --project=chromium
-# Runs the tests of a specific file
-pnpm test:e2e tests/example.spec.ts
-# Runs the tests in debug mode
-pnpm test:e2e --debug
 ```
 
 ### Lint with [ESLint](https://eslint.org/)
