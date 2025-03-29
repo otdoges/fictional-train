@@ -13,19 +13,52 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  chats     Chat[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Chat {
   id        String    @id @default(uuid())
   name      String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  messages  Message[]
 }
 
 model Message {
   id        String   @id @default(uuid())
   content   String
-  role      String   // 'user' or 'assistant'
-  createdAt DateTime @default(now())
-  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role      String   // 'user' | 'assistant' | 'system'
   chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  name      String
+  provider  String   // 'openrouter' | 'azure'
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Settings {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  theme     String   @default("system") // 'light' | 'dark' | 'system'
+  defaultModel String @default("gemini")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

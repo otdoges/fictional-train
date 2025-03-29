@@ -2,11 +2,11 @@
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { db } from '@/services/db'
-import { ai, type ChatMessage as AIChatMessage } from '@/services/ai'
+import { ai, type ChatMessage as AIChatMessage, models } from '@/services/ai'
 import ChatMessageComponent from '@/components/ChatMessage.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { SendIcon } from 'lucide-vue-next'
-import { LockIcon, ZapIcon } from 'lucide-vue-next'
+import { LockIcon, ZapIcon, ChevronDownIcon, CheckIcon } from 'lucide-vue-next'
 
 // Define chat interface to match Prisma model
 interface Chat {
@@ -34,6 +34,15 @@ const loading = ref(false)
 const messageContainerRef = ref<HTMLDivElement | null>(null)
 const streamedResponse = ref('')
 const useAzureModel = ref(false)
+const showModelDropdown = ref(false)
+const selectedModel = ref(models.gemini)
+
+// Available models for selection
+const availableModels = [
+  { name: 'Gemini 2.5 Pro', value: models.gemini, provider: 'OpenRouter' },
+  { name: 'GPT-4o', value: models.gpt4, provider: 'OpenRouter' },
+  { name: 'Azure AI', value: models.azure, provider: 'Azure', useAzure: true },
+]
 
 const loadChat = async () => {
   try {
@@ -72,8 +81,14 @@ const saveMessage = async (content: string, role: 'user' | 'assistant') => {
   }
 }
 
-const toggleModel = () => {
-  useAzureModel.value = !useAzureModel.value
+const selectModel = (model: (typeof availableModels)[0]) => {
+  selectedModel.value = model.value
+  useAzureModel.value = !!model.useAzure
+  showModelDropdown.value = false
+}
+
+const toggleModelDropdown = () => {
+  showModelDropdown.value = !showModelDropdown.value
 }
 
 const sendMessage = async () => {
@@ -101,7 +116,7 @@ const sendMessage = async () => {
     await ai.streamChat(
       aiMessages,
       useAzureModel.value,
-      undefined, // use default model
+      selectedModel.value, // use selected model
       (chunk) => {
         streamedResponse.value += chunk
         scrollToBottom()
@@ -152,16 +167,40 @@ onMounted(() => {
     </div>
 
     <div class="p-4 bg-background">
-      <!-- Model toggle -->
-      <div class="flex justify-end mb-2">
+      <!-- Model selector dropdown -->
+      <div class="flex justify-end mb-2 relative">
         <button
-          @click="toggleModel"
-          class="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+          @click="toggleModelDropdown"
+          class="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors border border-input px-2 py-1 rounded"
         >
           <LockIcon v-if="useAzureModel" class="h-3 w-3 mr-1" />
           <ZapIcon v-else class="h-3 w-3 mr-1" />
-          Using: {{ useAzureModel ? 'Azure AI' : 'OpenRouter' }}
+          {{ useAzureModel ? 'Azure AI' : selectedModel === models.gemini ? 'Gemini' : 'GPT-4o' }}
+          <ChevronDownIcon class="h-3 w-3 ml-1" />
         </button>
+
+        <!-- Dropdown content -->
+        <div
+          v-if="showModelDropdown"
+          class="absolute top-full right-0 mt-1 w-56 bg-popover border border-border rounded-md shadow-md z-10"
+        >
+          <div class="p-1 text-sm">
+            <button
+              v-for="model in availableModels"
+              :key="model.value"
+              @click="selectModel(model)"
+              class="flex items-center justify-between w-full px-2 py-1.5 rounded hover:bg-muted"
+            >
+              <span class="flex items-center">
+                <ZapIcon v-if="!model.useAzure" class="h-3 w-3 mr-1.5" />
+                <LockIcon v-else class="h-3 w-3 mr-1.5" />
+                {{ model.name }}
+              </span>
+              <span class="text-xs text-muted-foreground">{{ model.provider }}</span>
+              <CheckIcon v-if="selectedModel === model.value" class="h-3 w-3 ml-2" />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="flex gap-2 items-end">

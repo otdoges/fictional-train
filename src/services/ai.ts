@@ -8,24 +8,43 @@ const openai = new OpenAI({
     'HTTP-Referer': import.meta.env.VITE_OPENROUTER_SITE_URL || window.location.origin,
     'X-Title': import.meta.env.VITE_OPENROUTER_SITE_NAME || 'Vue AI Chat',
   },
+  dangerouslyAllowBrowser: true,
+})
+
+// Azure OpenAI client
+const azureClient = new OpenAI({
+  apiKey: import.meta.env.VITE_AZURE_API_KEY || '',
+  baseURL: import.meta.env.VITE_AZURE_ENDPOINT || '',
+  defaultQuery: { 'api-version': '2023-12-01-preview' },
+  defaultHeaders: { 'api-key': import.meta.env.VITE_AZURE_API_KEY || '' },
+  dangerouslyAllowBrowser: true,
 })
 
 // Defines available models
 export const models = {
   gemini: 'google/gemini-2.5-pro-exp-03-25:free',
   gpt4: 'openai/gpt-4o',
+  azure: import.meta.env.VITE_AZURE_MODEL || 'gpt-4o',
 }
 
-// Azure client for the second provider
-// For static sites, we need to use a backend service to proxy requests
-// This is a placeholder - in production, you'd use an API route or serverless function
+// Azure client implementation
 async function callAzureAI(messages: ChatMessage[]) {
   try {
-    // In a static site, we'd call a serverless function here
-    // Example: const response = await fetch('/api/azure-ai', { method: 'POST', body: JSON.stringify({ messages }) })
-    // For now, we'll fall back to OpenRouter
-    console.warn('Azure AI client would be called here in production - using OpenRouter fallback')
+    // Use the Azure client to make requests
+    const response = await azureClient.chat.completions.create({
+      model: models.azure,
+      messages: messages.map((msg) => ({ role: msg.role, content: msg.content })),
+    })
 
+    return {
+      content: response.choices[0].message.content || '',
+      model: `azure-ai (${models.azure})`,
+    }
+  } catch (error) {
+    console.error('Error calling Azure AI:', error)
+
+    // Fallback to OpenRouter if Azure fails
+    console.warn('Falling back to OpenRouter')
     const response = await openai.chat.completions.create({
       model: models.gpt4,
       messages: messages.map((msg) => ({ role: msg.role, content: msg.content })),
@@ -35,9 +54,6 @@ async function callAzureAI(messages: ChatMessage[]) {
       content: response.choices[0].message.content || '',
       model: 'azure-ai (fallback to OpenRouter)',
     }
-  } catch (error) {
-    console.error('Error calling Azure AI:', error)
-    throw new Error('Failed to get Azure AI response')
   }
 }
 
@@ -77,11 +93,37 @@ export const ai = {
   ) {
     try {
       if (useAzure) {
-        // Azure doesn't support streaming in this implementation
-        // Return non-streaming response
-        const response = await callAzureAI(messages)
-        onChunk(response.content)
-        return response
+        try {
+          // Use Azure streaming
+          const response = await azureClient.chat.completions.create({
+            model: models.azure,
+            messages: messages.map((msg) => ({ role: msg.role, content: msg.content })),
+            stream: true,
+          })
+
+          let fullContent = ''
+
+          for await (const chunk of response) {
+            const content = chunk.choices[0]?.delta?.content || ''
+            if (content) {
+              fullContent += content
+              onChunk(content)
+            }
+          }
+
+          return {
+            content: fullContent,
+            model: `azure-ai (${models.azure})`,
+          }
+        } catch (error) {
+          console.error('Error streaming from Azure:', error)
+          console.warn('Falling back to non-streaming Azure response')
+
+          // Fallback to non-streaming response
+          const response = await callAzureAI(messages)
+          onChunk(response.content)
+          return response
+        }
       }
 
       const response = await openai.chat.completions.create({

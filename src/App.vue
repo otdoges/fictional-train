@@ -1,11 +1,33 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { auth } from '@/services/auth'
 
 // Check if user is authenticated
 const isAuthenticated = computed(() => auth.isAuthenticated())
+
+// Error handling
+const error = ref('')
+const showError = ref(false)
+
+// Global error handler
+window.addEventListener('error', (event) => {
+  error.value = event.message || 'An unexpected error occurred'
+  showError.value = true
+  setTimeout(() => {
+    showError.value = false
+  }, 5000)
+})
+
+// Handle unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  error.value = event.reason?.message || 'An unexpected error occurred'
+  showError.value = true
+  setTimeout(() => {
+    showError.value = false
+  }, 5000)
+})
 
 // Detect and set dark mode
 onMounted(() => {
@@ -20,28 +42,50 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-background text-foreground antialiased">
+  <div class="min-h-screen bg-background">
     <!-- Show header only when authenticated -->
     <AppHeader v-if="isAuthenticated" />
 
+    <!-- Error toast notification -->
+    <div
+      v-if="showError"
+      class="fixed top-4 right-4 z-50 bg-destructive text-destructive-foreground p-4 rounded-md shadow-lg max-w-md"
+    >
+      <div class="flex items-start">
+        <div class="flex-1">
+          <p class="font-medium">Error</p>
+          <p class="text-sm">{{ error }}</p>
+        </div>
+        <button @click="showError = false" class="ml-4 text-sm">×</button>
+      </div>
+    </div>
+
     <!-- Main content area -->
-    <main :class="{ 'pt-0': !isAuthenticated }">
+    <main>
       <RouterView />
     </main>
   </div>
 </template>
 
 <style>
-/* Remove default margins/padding */
+/* Base styles */
 html,
 body {
+  height: 100%;
   margin: 0;
   padding: 0;
-  height: 100%;
 }
 
 #app {
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 header {
@@ -77,6 +121,13 @@ nav a {
 
 nav a:first-of-type {
   border: 0;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
 }
 
 @media (min-width: 1024px) {

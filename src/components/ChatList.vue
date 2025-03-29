@@ -1,100 +1,141 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { db } from '@/services/db'
-import BaseButton from '@/components/ui/BaseButton.vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { PlusCircleIcon, TrashIcon } from 'lucide-vue-next'
+import { db } from '@/services/db'
+import { MoreVerticalIcon, TrashIcon, PencilIcon, CheckIcon, XIcon } from 'lucide-vue-next'
+import BaseButton from '@/components/ui/BaseButton.vue'
 
-// Define chat interface to match Prisma model
-interface Chat {
-  id: string
-  name: string
-  createdAt: Date
-  updatedAt: Date
-}
+const props = defineProps({
+  chats: {
+    type: Array,
+    required: true,
+  },
+})
 
-const chats = ref<Chat[]>([])
-const newChatName = ref('')
-const chatListRef = ref<HTMLDivElement | null>(null)
+const emit = defineEmits(['refresh'])
+
 const router = useRouter()
+const editingChatId = ref(null)
+const editChatName = ref('')
+const menuOpenChatId = ref(null)
 
-const loadChats = async () => {
-  try {
-    chats.value = await db.getChats()
-  } catch (error) {
-    console.error('Error loading chats:', error)
-  }
+// Navigate to a chat
+const goToChat = (id) => {
+  router.push(`/chat/${id}`)
 }
 
-const createChat = async () => {
-  if (!newChatName.value.trim()) return
+// Open edit mode for a chat
+const startEditChat = (chat) => {
+  editingChatId.value = chat.id
+  editChatName.value = chat.name
+  menuOpenChatId.value = null
+}
+
+// Cancel editing
+const cancelEdit = () => {
+  editingChatId.value = null
+  editChatName.value = ''
+}
+
+// Save edited chat name
+const saveEditedChat = async () => {
+  if (!editChatName.value.trim()) return
 
   try {
-    const chat = await db.createChat({
-      name: newChatName.value.trim(),
+    await db.updateChat(editingChatId.value, {
+      name: editChatName.value.trim(),
     })
-    newChatName.value = ''
-    router.push(`/chat/${chat.id}`)
+    emit('refresh')
   } catch (error) {
-    console.error('Error creating chat:', error)
+    console.error('Error updating chat:', error)
+  } finally {
+    editingChatId.value = null
+    editChatName.value = ''
   }
 }
 
-const deleteChat = async (id: string) => {
+// Delete a chat
+const deleteChat = async (id) => {
   try {
     await db.deleteChat(id)
-    await loadChats()
+    emit('refresh')
   } catch (error) {
     console.error('Error deleting chat:', error)
   }
 }
 
-const navigateToChat = (id: string) => {
-  router.push(`/chat/${id}`)
+// Toggle chat menu
+const toggleMenu = (chatId) => {
+  menuOpenChatId.value = menuOpenChatId.value === chatId ? null : chatId
 }
-
-onMounted(() => {
-  loadChats()
-})
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
-    <h2 class="text-xl font-semibold mb-4">Your Chats</h2>
-
-    <div class="flex gap-2 mb-6">
-      <input
-        v-model="newChatName"
-        type="text"
-        placeholder="New chat name..."
-        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        @keyup.enter="createChat"
-      />
-      <BaseButton @click="createChat" size="icon">
-        <PlusCircleIcon class="h-5 w-5" />
-      </BaseButton>
-    </div>
-
-    <div ref="chatListRef" class="space-y-2 overflow-y-auto">
+  <div class="space-y-1.5">
+    <div v-for="chat in props.chats" :key="chat.id" class="group relative">
+      <!-- Editing mode -->
       <div
-        v-for="chat in chats"
-        :key="chat.id"
-        class="flex items-center justify-between p-3 rounded-md bg-card hover:bg-accent/30 transition-colors cursor-pointer"
-        @click="navigateToChat(chat.id)"
+        v-if="editingChatId === chat.id"
+        class="flex items-center w-full gap-1 p-2 rounded-md border border-input"
       >
-        <div>
-          <h3 class="font-medium">{{ chat.name }}</h3>
-          <p class="text-xs text-muted-foreground">
-            {{ new Date(chat.updatedAt).toLocaleString() }}
-          </p>
-        </div>
-        <BaseButton variant="ghost" size="icon" class="h-8 w-8" @click.stop="deleteChat(chat.id)">
-          <TrashIcon class="h-4 w-4 text-muted-foreground hover:text-destructive" />
+        <input
+          v-model="editChatName"
+          class="flex-1 bg-transparent border-none outline-none text-sm"
+          @keyup.enter="saveEditedChat"
+          @keyup.esc="cancelEdit"
+          ref="editInput"
+          autofocus
+        />
+        <BaseButton variant="ghost" size="sm" @click="saveEditedChat" class="h-8 w-8 p-0">
+          <CheckIcon class="h-4 w-4 text-muted-foreground" />
+        </BaseButton>
+        <BaseButton variant="ghost" size="sm" @click="cancelEdit" class="h-8 w-8 p-0">
+          <XIcon class="h-4 w-4 text-muted-foreground" />
         </BaseButton>
       </div>
 
-      <div v-if="chats.length === 0" class="text-center py-8 text-muted-foreground">
-        No chats yet. Create one to get started!
+      <!-- Normal view -->
+      <div
+        v-else
+        class="flex items-center justify-between w-full p-2 rounded-md hover:bg-accent transition-colors cursor-pointer"
+        @click="goToChat(chat.id)"
+      >
+        <span class="text-sm truncate">{{ chat.name }}</span>
+
+        <!-- Actions menu -->
+        <div class="relative ml-2">
+          <BaseButton
+            variant="ghost"
+            size="sm"
+            @click.stop="toggleMenu(chat.id)"
+            class="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <MoreVerticalIcon class="h-4 w-4 text-muted-foreground" />
+          </BaseButton>
+
+          <!-- Dropdown -->
+          <div
+            v-if="menuOpenChatId === chat.id"
+            class="absolute right-0 z-10 mt-1 w-40 bg-popover rounded-md shadow-md border border-border"
+          >
+            <div class="p-1">
+              <button
+                @click.stop="startEditChat(chat)"
+                class="flex w-full items-center px-2 py-1.5 text-sm rounded hover:bg-muted"
+              >
+                <PencilIcon class="h-4 w-4 mr-2" />
+                Rename
+              </button>
+              <button
+                @click.stop="deleteChat(chat.id)"
+                class="flex w-full items-center px-2 py-1.5 text-sm rounded hover:bg-muted text-destructive"
+              >
+                <TrashIcon class="h-4 w-4 mr-2" />
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

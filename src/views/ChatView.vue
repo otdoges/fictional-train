@@ -1,53 +1,51 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, onBeforeMount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import ChatInterface from '@/components/ChatInterface.vue'
-import BaseButton from '@/components/ui/BaseButton.vue'
-import { ChevronLeftIcon } from 'lucide-vue-next'
 import { db } from '@/services/db'
+import { useMotion } from '@vueuse/motion'
 
-const route = useRoute()
+const chatExists = ref(true)
+const isLoading = ref(true)
 const router = useRouter()
-const chatId = ref('')
-const chatName = ref('')
+const route = useRoute()
 
-const loadChatInfo = async () => {
+onBeforeMount(async () => {
+  const chatId = route.params.id as string
   try {
-    chatId.value = route.params.id as string
-    const chat = await db.getChat(chatId.value)
+    isLoading.value = true
+    const chat = await db.getChat(chatId)
 
-    if (chat) {
-      chatName.value = chat.name
+    if (!chat) {
+      chatExists.value = false
+      router.push('/')
     }
   } catch (error) {
-    console.error('Error loading chat info:', error)
-    router.push('/')
+    console.error('Error checking chat existence:', error)
+    chatExists.value = false
+  } finally {
+    isLoading.value = false
   }
-}
-
-const goBack = () => {
-  router.push('/')
-}
-
-onMounted(() => {
-  loadChatInfo()
 })
 </script>
 
 <template>
-  <div class="container mx-auto py-6 h-[calc(100vh-60px)]">
-    <div
-      class="max-w-4xl mx-auto bg-card rounded-lg shadow-md border border-border overflow-hidden h-[calc(100vh-160px)]"
-    >
-      <div class="flex items-center gap-2 p-4 border-b border-border">
-        <BaseButton variant="ghost" size="icon" @click="goBack">
-          <ChevronLeftIcon class="h-5 w-5" />
-        </BaseButton>
-        <h1 class="text-lg font-medium">{{ chatName }}</h1>
-      </div>
+  <div class="flex flex-col h-[calc(100vh-4rem)]">
+    <div v-if="isLoading" class="flex-1 flex items-center justify-center">
+      <div class="animate-pulse">Loading chat...</div>
+    </div>
 
-      <div class="h-[calc(100%-64px)]">
-        <ChatInterface />
+    <use-motion v-else-if="chatExists">
+      <ChatInterface class="flex-1" />
+    </use-motion>
+
+    <div v-else class="flex-1 flex items-center justify-center">
+      <div class="text-center p-6">
+        <h2 class="text-xl font-bold mb-2">Chat not found</h2>
+        <p class="text-muted-foreground mb-4">
+          The chat you're looking for doesn't exist or has been deleted.
+        </p>
+        <router-link to="/" class="text-primary hover:underline">Return to home</router-link>
       </div>
     </div>
   </div>

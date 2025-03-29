@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '@/services/auth'
 import BaseButton from '@/components/ui/BaseButton.vue'
-import { LogOutIcon, UserIcon, MoonIcon, SunIcon } from 'lucide-vue-next'
+import { LogOutIcon, UserIcon, MoonIcon, SunIcon, InfoIcon } from 'lucide-vue-next'
 
 const router = useRouter()
 const user = computed(() => auth.getCurrentUser())
@@ -16,6 +16,10 @@ const logout = async () => {
 
 const toggleDarkMode = () => {
   document.documentElement.classList.toggle('dark')
+}
+
+const navigateToAbout = () => {
+  router.push('/about')
 }
 </script>
 
@@ -34,6 +38,15 @@ const toggleDarkMode = () => {
       >
         <MoonIcon v-if="!isDarkMode" class="h-5 w-5" />
         <SunIcon v-else class="h-5 w-5" />
+      </button>
+
+      <!-- About page -->
+      <button
+        @click="navigateToAbout"
+        class="p-2 text-muted-foreground hover:text-foreground transition-colors"
+        title="About"
+      >
+        <InfoIcon class="h-5 w-5" />
       </button>
 
       <!-- User info -->
